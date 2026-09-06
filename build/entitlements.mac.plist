@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Sertleştirilmiş çalışma zamanı (hardened runtime) izinleri.
+
+  NOTERLEME İÇİN ZORUNLU: Apple, notarize edilecek uygulamada hardened
+  runtime şartı koyuyor. Ama hardened runtime, Electron'un ihtiyaç duyduğu
+  şeyleri VARSAYILAN OLARAK YASAKLAR — bu dosya olmadan uygulama imzalanır,
+  notarize olur ve AÇILIŞTA ÇÖKER. Klasik tuzak: sorun derlemede değil,
+  müşterinin makinesinde ortaya çıkar.
+
+  Dördü de V8/Chromium için:
+    allow-jit                        → V8 makine kodunu çalışma anında üretir
+    allow-unsigned-executable-memory → aynı sebep, imzasız bellek sayfaları
+    allow-dyld-environment-variables → Electron yardımcı süreçleri kurarken
+    disable-library-validation       → yardımcı süreçler ve çerçeveler
+                                       ana ikiliyle aynı ekiple imzalanmıyor
+
+  Sandbox YOK: uygulama panelin kendi oturumunu taşıyor ve menü çubuğuna
+  yerleşiyor; App Store dağıtımı hedeflenmiyor.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

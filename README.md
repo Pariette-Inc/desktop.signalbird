@@ -32,11 +32,62 @@ giderse Gatekeeper karantinası devreye girer, ilk açılışta sağ tık → A�
 (ya da `xattr -dr com.apple.quarantine /Applications/Signalbird.app`).
 Gerçek dağıtım için Apple Developer hesabı ve `mac.notarize` gerekir.
 
+## Dağıtım (müşteriye indirme linki)
+
+**Yerel derleme ile dağıtım derlemesi AYNI ŞEY DEĞİL.**
+
+```bash
+npm run dist          # yerel: ad-hoc imza, yalnız arm64, notarleme yok
+npm run dist:release  # dağıtım: Developer ID + hardened runtime + notarize, universal
+```
+
+`npm run dist` çıktısı **müşteriye gönderilemez.** Ad-hoc imza Gatekeeper'ı
+geçmez: dosya internetten indiği anda macOS karantina damgası basar ve
+kullanıcı "Apple bu uygulamada kötü amaçlı yazılım olup olmadığını
+doğrulayamadı" ekranını görür. Güncel macOS'ta sağ tık → Aç kısayolu da yok;
+kullanıcının Sistem Ayarları → Gizlilik ve Güvenlik'e gitmesi gerekir.
+
+### `dist:release` için gerekenler
+
+1. **Developer ID Application sertifikası** anahtarlığa kurulu olmalı.
+   `Apple Development` sertifikası YETMEZ — o ayrı bir tür ve dağıtımı geçmez.
+   Kontrol:
+   ```bash
+   security find-identity -v -p codesigning | grep "Developer ID"
+   ```
+   Yoksa: Xcode → Settings → Accounts → Pariette Inc → Manage Certificates →
+   + → Developer ID Application. (Kurumsal hesapta bunu yalnız Account Holder
+   üretebilir.)
+
+2. **Noterleme kimliği** ortam değişkeni olarak. App Store Connect API anahtarı
+   önerilir (parola taşımaz):
+   ```
+   APPLE_API_KEY=/güvenli/yol/AuthKey_XXXXXXXX.p8
+   APPLE_API_KEY_ID=XXXXXXXX
+   APPLE_API_ISSUER=<issuer-uuid>
+   ```
+   `.p8` dosyası bir SIRDIR — repoya konmaz, kabuk geçmişine yazılmaz.
+
+Notarleme Apple sunucusunda kuyruğa girer; derleme birkaç dakika bekleyebilir.
+Bittiğinde bilet DMG'ye yapıştırılır (`stapled`) ve uygulama internetten
+inince uyarısız açılır.
+
+### Neden universal
+
+`dist:release` Intel + Apple Silicon'u tek pakette üretir. Yalnız arm64
+gönderirsen Intel Mac'i olan müşteri uygulamayı **hiç açamaz**.
+
+### Doğrulama (göndermeden önce)
+
+```bash
+spctl -a -vvv -t install /Applications/<Uygulama>.app
+```
+`accepted` + `source=Notarized Developer ID` görmen gerekir.
+
 ## Paketleme
 
 ```bash
-npm run dist            # .dmg + .zip (bu makinenin mimarisi)
-npm run dist:universal  # Intel + Apple Silicon tek pakette
+npm run dist            # .dmg + .zip (yerel, ad-hoc, arm64)
 npm run icon            # assets/icon.png'i yeniden çizer
 ```
 

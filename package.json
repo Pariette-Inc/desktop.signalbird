@@ -8,8 +8,8 @@
   "scripts": {
     "start": "electron .",
     "icon": "node assets/make-icon.mjs",
-    "dist": "electron-builder --mac dmg zip",
-    "dist:universal": "electron-builder --mac dmg zip --universal"
+    "dist": "electron-builder --mac dmg zip --arm64 -c.mac.identity=null -c.mac.hardenedRuntime=false -c.mac.notarize=false",
+    "dist:release": "electron-builder --mac dmg zip"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -34,21 +34,24 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64",
-            "x64"
+            "universal"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "arm64",
-            "x64"
+            "universal"
           ]
         }
       ],
-      "identity": null,
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "identity": "Developer ID Application: Pariette Inc (J83W2J3T7Y)",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": {
+        "teamId": "J83W2J3T7Y"
+      }
     },
     "dmg": {
       "title": "Signalbird",

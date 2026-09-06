@@ -2,26 +2,31 @@ const { execFileSync } = require('node:child_process');
 const { join } = require('node:path');
 
 /**
- * Paketlemeden SONRA ad-hoc imza.
+ * YEREL derlemeler için ad-hoc imza.
  *
- * `mac.identity: null` yazdığımız için electron-builder imzalamayı tamamen
- * atlıyor. Sonuç, Apple Silicon'da ÇALIŞMAYAN bir uygulama: arm64'te
- * imzasız bir paket başlatılamaz, macOS "zarar görmüş" der ve açmaz.
- * Paketten çıkan `.app`'in imzası yalnız Electron ikilisinin kendi
- * linker imzasıdır; paket kaynakları mühürlenmemiştir (Sealed Resources=none).
+ * ── Neden gerekli ───────────────────────────────────────────────────────
+ * `npm run dist` yapılandırmayı `mac.identity=null` ile eziyor; electron-builder
+ * o durumda imzalamayı tamamen atlıyor ve Apple Silicon'da İMZASIZ BİR PAKET
+ * HİÇ AÇILMIYOR — çift tıklayınca macOS "zarar görmüş" der. `codesign -s -`
+ * ad-hoc mühürler: sertifika gerekmez, uygulama bu makinede açılır.
  *
- * `codesign -s -` ad-hoc mühürler: Apple geliştirici sertifikası GEREKMEZ,
- * uygulama bu makinede ve kopyalandığı her Mac'te çift tıklamayla açılır.
- * Dağıtım imzası değildir — DMG başka birine e-postayla gönderilirse
- * Gatekeeper karantinası yine devreye girer (bkz. README).
+ * ── Neden koşullu ───────────────────────────────────────────────────────
+ * `npm run dist:release` gerçek Developer ID sertifikasıyla imzalıyor ve
+ * sonrasında notarize ediyor. Orada ad-hoc mühür vurmak en iyi ihtimalle
+ * gereksiz, en kötüsünde sertleştirilmiş çalışma zamanı izinlerini taşıyan
+ * imzayı bozar. Kimlik null DEĞİLSE burada hiçbir şey yapılmaz.
  */
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return;
 
+  // `identity: null` yalnız yerel derlemede olur (bkz. package.json `dist`).
+  if (context.packager.platformSpecificBuildOptions.identity !== null) return;
+
   const app = join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
 
-  // --deep: çerçeveler ve yardımcı süreçler de mühürlensin. Apple bunu
-  // dağıtım imzası için önermiyor ama ad-hoc mühürde tek pratik yol bu.
+  // --deep: çerçeveler ve yardımcı süreçler de mühürlensin. Apple bunu dağıtım
+  // imzası için önermiyor ama ad-hoc mühürde tek pratik yol bu — dağıtım
+  // imzasını zaten electron-builder kendi atıyor.
   execFileSync('codesign', ['--force', '--deep', '--sign', '-', app], { stdio: 'inherit' });
   execFileSync('codesign', ['--verify', '--deep', '--strict', app], { stdio: 'inherit' });
 };
