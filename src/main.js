@@ -26,7 +26,21 @@ const { WINDOW_DAYS, expireIfStale, startHeartbeat } = require('./session');
  * masaüstü uygulamasının panelden fazla yetkisi yok.
  */
 
-const APP_URL = process.env.SIGNALBIRD_URL || 'https://signalbird.io/tr';
+/*
+ * Uygulama PANELDE açılır, tanıtım sitesinde değil.
+ *
+ * (6 Eyl 2026, Ahmet: "programı açtığım anda login olucam, normal web
+ * sitesini görmeye ihtiyacım yok.")
+ *
+ * Önceki sürüm `signalbird.io/tr` yüklüyordu; orası `(marketing)` grubunun
+ * ana sayfası. Oturum açıkken bile karşılama sayfası açılıyor, panele
+ * gitmek için ayrıca tıklamak gerekiyordu. Masaüstü uygulamasının pazarlama
+ * sayfasını göstermesi için hiçbir sebep yok: buraya gelen kişi zaten
+ * müşteri.
+ */
+const ORIGIN = process.env.SIGNALBIRD_URL || 'https://signalbird.io';
+const HOME = '/tr/dashboard';
+const APP_URL = ORIGIN + HOME;
 const PARTITION = 'persist:signalbird';
 
 let mainWindow = null;
@@ -56,6 +70,8 @@ function createWindow() {
   });
 
   mainWindow.loadURL(APP_URL);
+
+  mainWindow.webContents.on('did-navigate', (_event, url) => bounceHome(url));
 
   /*
    * Dış bağlantılar TARAYICIDA açılır.
@@ -98,6 +114,33 @@ function isInternal(url) {
     return host === new URL(APP_URL).host || host.endsWith('.signalbird.io');
   } catch {
     return false;
+  }
+}
+
+/**
+ * Tanıtım sitesinin KÖKÜ panele çevrilir.
+ *
+ * Yalnız kök: `/`, `/tr`, `/en`. Çıkış yapınca ya da panel bir sebeple ana
+ * sayfaya atınca, masaüstünde karşımıza tanıtım sayfası çıkmasın. Daha
+ * geniş bir kural (bütün `(marketing)` yolları) riskli olurdu — sözleşme
+ * ya da fatura sayfaları da oradan geçiyor.
+ *
+ * Giriş yapılmamışsa panel kendisi `/login`'e atar; burada döngü olmaz,
+ * çünkü `/login` kök değil.
+ */
+function bounceHome(url) {
+  try {
+    const parsed = new URL(url);
+
+    if (!isInternal(url)) return;
+    if (!/^\/(tr|en)?\/?$/.test(parsed.pathname)) return;
+
+    const locale = parsed.pathname.match(/^\/(tr|en)/)?.[0] ?? '/tr';
+
+    mainWindow?.loadURL(`${parsed.origin}${locale}/dashboard`);
+  } catch {
+    // Adres çözülemiyorsa dokunma: yanlış bir yönlendirme, yanlış yerde
+    // kalmaktan daha kötü.
   }
 }
 

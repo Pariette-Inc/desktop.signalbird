@@ -7,8 +7,9 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --mac",
-    "dist:universal": "electron-builder --mac --universal"
+    "icon": "node assets/make-icon.mjs",
+    "dist": "electron-builder --mac dmg zip",
+    "dist:universal": "electron-builder --mac dmg zip --universal"
   },
   "devDependencies": {
     "electron": "^33.2.0",
@@ -17,10 +18,54 @@
   "build": {
     "appId": "io.signalbird.desktop",
     "productName": "Signalbird",
-    "files": ["src/**/*", "assets/**/*", "package.json"],
+    "files": [
+      "src/**/*",
+      "assets/icon.png",
+      "package.json",
+      "!build/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg", "zip"]
-    }
+      "icon": "assets/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Signalbird",
+      "contents": [
+        {
+          "x": 140,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "afterPack": "build/afterPack.js"
   }
 }
