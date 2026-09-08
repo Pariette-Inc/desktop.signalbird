@@ -12,17 +12,17 @@ Panel + **menü çubuğunda telsiz ve bildirimler**. macOS için Electron.
 
 ## Ne yapar
 
-1. Doğrudan **panelde** açılır (`signalbird.io/tr/dashboard`) — tanıtım
+1. Doğrudan **panelde** açılır (`signalbird.io/tr/dashboard`) - tanıtım
    sayfasında değil. Buraya gelen kişi zaten müşteri.
 2. Menü çubuğuna yerleşir: **son 8 telsiz olayı** başlıklarıyla listelenir,
    okunmamış bildirim sayısı simgenin yanında durur. Bir olaya tıklamak
    pencereyi açıp doğrudan o olayın künyesine gider.
-3. `error`/`critical` olaylarda macOS bildirimi gösterir — **yalnız onlarda**.
+3. `error`/`critical` olaylarda macOS bildirimi gösterir - **yalnız onlarda**.
    Her olay için bildirim, menü çubuğunun varlık sebebini yok ederdi.
 
 ## Kurulum
 
-`npm` gerekmez — `dist/` altındaki **DMG'yi açıp uygulamayı Applications'a
+`npm` gerekmez - `dist/` altındaki **DMG'yi açıp uygulamayı Applications'a
 sürükleyin**, sonra çift tıklayın.
 
 Paket **ad-hoc imzalıdır** (`build/afterPack.js`). Apple Silicon'da imzasız bir
@@ -50,7 +50,7 @@ kullanıcının Sistem Ayarları → Gizlilik ve Güvenlik'e gitmesi gerekir.
 ### `dist:release` için gerekenler
 
 1. **Developer ID Application sertifikası** anahtarlığa kurulu olmalı.
-   `Apple Development` sertifikası YETMEZ — o ayrı bir tür ve dağıtımı geçmez.
+   `Apple Development` sertifikası YETMEZ - o ayrı bir tür ve dağıtımı geçmez.
    Kontrol:
    ```bash
    security find-identity -v -p codesigning | grep "Developer ID"
@@ -66,7 +66,7 @@ kullanıcının Sistem Ayarları → Gizlilik ve Güvenlik'e gitmesi gerekir.
    APPLE_API_KEY_ID=XXXXXXXX
    APPLE_API_ISSUER=<issuer-uuid>
    ```
-   `.p8` dosyası bir SIRDIR — repoya konmaz, kabuk geçmişine yazılmaz.
+   `.p8` dosyası bir SIRDIR - repoya konmaz, kabuk geçmişine yazılmaz.
 
 Notarleme Apple sunucusunda kuyruğa girer; derleme birkaç dakika bekleyebilir.
 Bittiğinde bilet DMG'ye yapıştırılır (`stapled`) ve uygulama internetten
@@ -93,7 +93,7 @@ npm run icon            # assets/icon.png'i yeniden çizer
 
 Uygulama simgesi repoda elle konmuş bir ikili değil; `assets/make-icon.mjs`
 onu bağımlılıksız üretiyor (zlib + elle PNG parçaları). Renk panelin
-`--primary`sinden (Han moru) geliyor — masaüstü web ile aynı mürekkebi
+`--primary`sinden (Han moru) geliyor - masaüstü web ile aynı mürekkebi
 kullansın diye.
 
 ## Geliştirme

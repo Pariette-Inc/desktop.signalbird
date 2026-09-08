@@ -5,7 +5,7 @@
 
   NOTERLEME İÇİN ZORUNLU: Apple, notarize edilecek uygulamada hardened
   runtime şartı koyuyor. Ama hardened runtime, Electron'un ihtiyaç duyduğu
-  şeyleri VARSAYILAN OLARAK YASAKLAR — bu dosya olmadan uygulama imzalanır,
+  şeyleri VARSAYILAN OLARAK YASAKLAR - bu dosya olmadan uygulama imzalanır,
   notarize olur ve AÇILIŞTA ÇÖKER. Klasik tuzak: sorun derlemede değil,
   müşterinin makinesinde ortaya çıkar.
 

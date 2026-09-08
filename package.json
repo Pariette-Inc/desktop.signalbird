@@ -2,7 +2,7 @@
   "name": "signalbird-desktop",
   "productName": "Signalbird",
   "version": "1.0.0",
-  "description": "Signalbird masaüstü uygulaması — panel + menü çubuğunda telsiz ve bildirimler",
+  "description": "Signalbird masaüstü uygulaması - panel + menü çubuğunda telsiz ve bildirimler",
   "main": "src/main.js",
   "private": true,
   "scripts": {

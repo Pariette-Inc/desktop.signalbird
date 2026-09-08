@@ -7,7 +7,7 @@ const { dirname, join } = require('node:path');
  *
  * Electron oturumu kendiliğinden SONSUZ yaşar: `localStorage` ve çerezler
  * kalıcı bölümde durur, uygulama kapansa da kalır. Yani hiçbir şey yapmazsak
- * bir kere giriş yapan makine sonsuza kadar açık kalırdı — çalınan ya da
+ * bir kere giriş yapan makine sonsuza kadar açık kalırdı - çalınan ya da
  * ikinci el verilen bir dizüstü, sahibinin panelini de birlikte götürürdü.
  *
  * Kural şudur: her AÇILIŞTA ve düzenli aralıklarla "son görüldü" damgası
@@ -59,7 +59,7 @@ function touch() {
 async function expireIfStale(session) {
   const { lastSeenAt } = read();
 
-  // Damga yoksa bu ilk açılıştır (ya da damga yazılamıyor) — temizleme.
+  // Damga yoksa bu ilk açılıştır (ya da damga yazılamıyor) - temizleme.
   if (!lastSeenAt) {
     touch();
 

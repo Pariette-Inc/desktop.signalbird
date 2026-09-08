@@ -22,7 +22,7 @@ const { WINDOW_DAYS, expireIfStale, startHeartbeat } = require('./session');
  * ── Menü çubuğu veriyi NEREDEN alıyor ───────────────────────────────────
  * Panelin oturum jetonu `localStorage`'ta. Ana süreç oraya erişemez; bu
  * yüzden veriyi pencerenin KENDİSİ çeker (preload → `sb:poll`) ve IPC ile
- * ana sürece verir. Ayrı bir kimlik ya da ikinci bir jeton üretmiyoruz —
+ * ana sürece verir. Ayrı bir kimlik ya da ikinci bir jeton üretmiyoruz -
  * masaüstü uygulamasının panelden fazla yetkisi yok.
  */
 
@@ -47,7 +47,7 @@ let mainWindow = null;
 let tray = null;
 /** Menü çubuğunun gösterdiği son veri. Pencere kapalıyken de elde kalır. */
 let latest = { events: [], unread: 0, error: null, at: null };
-/** Bildirim gösterilen olaylar — aynı olay iki kez masaüstü bildirimi vermesin. */
+/** Bildirim gösterilen olaylar - aynı olay iki kez masaüstü bildirimi vermesin. */
 const notified = new Set();
 
 function createWindow() {
@@ -122,7 +122,7 @@ function isInternal(url) {
  *
  * Yalnız kök: `/`, `/tr`, `/en`. Çıkış yapınca ya da panel bir sebeple ana
  * sayfaya atınca, masaüstünde karşımıza tanıtım sayfası çıkmasın. Daha
- * geniş bir kural (bütün `(marketing)` yolları) riskli olurdu — sözleşme
+ * geniş bir kural (bütün `(marketing)` yolları) riskli olurdu - sözleşme
  * ya da fatura sayfaları da oradan geçiyor.
  *
  * Giriş yapılmamışsa panel kendisi `/login`'e atar; burada döngü olmaz,
@@ -163,7 +163,7 @@ function trayIcon(unread) {
    * Şablon görüntü (`setTemplateImage`): macOS koyu/açık menü çubuğunda
    * simgeyi kendisi boyar. Renkli bir PNG koysaydık açık temada okunmuyordu.
    *
-   * Simge dosya olarak değil, kodda çizilerek üretiliyor — 16 piksellik bir
+   * Simge dosya olarak değil, kodda çizilerek üretiliyor - 16 piksellik bir
    * kuş silueti için repoya ikili dosya koymaya değmez ve okunmamış varken
    * noktalı hâli aynı yerden çıkıyor.
    */
@@ -234,7 +234,7 @@ function buildTrayMenu() {
   tray.setContextMenu(Menu.buildFromTemplate(items));
   tray.setImage(trayIcon(latest.unread));
 
-  // Başlıkta yalnız okunmamış SAYI durur; sıfırken hiçbir şey yazmaz —
+  // Başlıkta yalnız okunmamış SAYI durur; sıfırken hiçbir şey yazmaz -
   // menü çubuğunda sürekli duran bir "0" gürültüdür.
   tray.setTitle(latest.unread > 0 ? String(latest.unread) : '');
 }
