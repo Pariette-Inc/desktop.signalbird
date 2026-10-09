@@ -15,7 +15,8 @@ Panel + **menü çubuğunda telsiz ve bildirimler**. macOS için Electron.
 1. Doğrudan **panelde** açılır (`signalbird.io/tr/dashboard`) - tanıtım
    sayfasında değil. Buraya gelen kişi zaten müşteri.
 2. Menü çubuğuna yerleşir: **son 8 telsiz olayı** başlıklarıyla listelenir,
-   okunmamış bildirim sayısı simgenin yanında durur. Bir olaya tıklamak
+   okunmamış bildirim sayısı simgenin yanında durur, okunmamış son 5 bildirim
+   başlıklarıyla listelenir (tıklanınca kendi ekranında açılır, okundu sayılır). Bir olaya tıklamak
    pencereyi açıp doğrudan o olayın künyesine gider.
 3. `error`/`critical` olaylarda macOS bildirimi gösterir - **yalnız onlarda**.
    Her olay için bildirim, menü çubuğunun varlık sebebini yok ederdi.
@@ -91,10 +92,15 @@ npm run dist            # .dmg + .zip (yerel, ad-hoc, arm64)
 npm run icon            # assets/icon.png'i yeniden çizer
 ```
 
-Uygulama simgesi repoda elle konmuş bir ikili değil; `assets/make-icon.mjs`
-onu bağımlılıksız üretiyor (zlib + elle PNG parçaları). Renk panelin
-`--primary`sinden (Han moru) geliyor - masaüstü web ile aynı mürekkebi
-kullansın diye.
+Simgeler SVG kaynaklarından üretilir (`npm run icon`, gerekli:
+`brew install librsvg`):
+
+- `assets/icon.svg` → `icon.png`: mobil uygulamanın marka simgesiyle
+  (`app.signalbird/assets/brand/icon.svg`) aynı kuş, macOS ızgarasına
+  (824 px yuvarlatılmış kare) oturtulmuş.
+- `assets/tray.svg`, `tray-unread.svg` → `tray*Template.png` (+ `@2x`):
+  menü çubuğu simgesi. Şablon görüntüdür, macOS açık/koyu temaya göre boyar.
+  Electron'un `nativeImage`'ı SVG çözemez; PNG olmak zorunda.
 
 ## Geliştirme
 
@@ -103,7 +109,10 @@ npm install
 npm start
 ```
 
-Başka bir kuruluma bağlanmak için: `SIGNALBIRD_URL=https://… npm start`
+Başka bir kuruluma bağlanmak için:
+`SIGNALBIRD_URL=https://… SIGNALBIRD_API_URL=https://…/api npm start`
+(API varsayılanı `https://live.signalbird.io/api`; panelin kökeninden türetilmez,
+`signalbird.io/api` yalnız geliştirmedeki vekildir.)
 
 ## Kararlar
 
@@ -113,7 +122,11 @@ Başka bir kuruluma bağlanmak için: `SIGNALBIRD_URL=https://… npm start`
 - **Menü çubuğu verisi sayfanın kendi jetonuyla okunur** (`src/preload.js`).
   Ana süreç `localStorage`'a erişemez ve erişebilseydi bile ikinci bir kimlik
   yolu açmış olurduk. Masaüstü uygulamasının panelden fazla yetkisi yok.
-- **Oturum: son kullanım + 30 gün** (`src/session.js`). Electron oturumu
+- **Oturum: son kullanım + 30 gün, kullanıldıkça uzar.** Sunucu jetonu
+  girişten 30 gün sonra düşürür; uygulama açıkken preload `POST /auth/refresh`
+  çağırır (açılışta ve 6 saatte bir), sunucu 24 saatten eski jetonun yerine
+  tazesini verir ve yeni jeton panelin deposuna yazılır. Her gün açan biri
+  hiç giriş yapmaz. Yerelde de aynı kural var (`src/session.js`). Electron oturumu
   kendiliğinden sonsuz yaşar; çalınan bir dizüstü sahibinin panelini de
   götürürdü. Süre GİRİŞTEN değil KULLANIMDAN sayılır: her gün açan hiç giriş
   yapmaz, bir ay dokunmayan yeniden girer. Süre dolduğunda sessizce çıkarmak
