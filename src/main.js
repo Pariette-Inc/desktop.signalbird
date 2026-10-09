@@ -39,14 +39,38 @@ const { WINDOW_DAYS, expireIfStale, startHeartbeat } = require('./session');
  * müşteri.
  */
 const ORIGIN = process.env.SIGNALBIRD_URL || 'https://signalbird.io';
+/*
+ * API ayrı alan adında. `signalbird.io/api` yalnız geliştirmedeki vekildir
+ * (signalbird.web `app/api/[...path]`); canlıda 501 döner. Panelin kendisi
+ * de `NEXT_PUBLIC_API_URL` ile doğrudan buraya gider.
+ */
+const API_URL = (process.env.SIGNALBIRD_API_URL || 'https://live.signalbird.io/api').replace(/\/+$/, '');
 const HOME = '/tr/dashboard';
 const APP_URL = ORIGIN + HOME;
 const PARTITION = 'persist:signalbird';
 
+/*
+ * Sürükleme alanı: panelin `data-app-drag` işaretli üst çubukları.
+ *
+ * - Çubuğun içindeki tıklanabilir her şey sürüklemeden muaf; yoksa
+ *   bağlantılar ve düğmeler tıklanmaz, pencereyi taşır.
+ * - Çubuk kaydırınca gizlenmez: gizlenseydi sürüklenecek yer ve trafik
+ *   ışıklarının zemini kaybolurdu.
+ * - `inset`: pencerenin sol kenarına dayanan çubuk, trafik ışıklarına yer
+ *   açar (admin çubuğu kenar çubuğunun sağında, ona gerek yok).
+ *
+ * Panel bu kuralları bilmez; işaret tarayıcıda hiçbir şey yapmaz.
+ */
+const DRAG_CSS = `
+  [data-app-drag] { -webkit-app-region: drag; transform: none !important; user-select: none; }
+  [data-app-drag] :is(a, button, input, select, textarea, label, summary, [role="button"], [role="menuitem"], [role="combobox"], [tabindex]) { -webkit-app-region: no-drag; }
+  [data-app-drag="inset"] { padding-left: 76px; }
+`;
+
 let mainWindow = null;
 let tray = null;
 /** Menü çubuğunun gösterdiği son veri. Pencere kapalıyken de elde kalır. */
-let latest = { events: [], unread: 0, error: null, at: null };
+let latest = { events: [], unread: 0, notifications: [], error: null, at: null };
 /** Bildirim gösterilen olaylar - aynı olay iki kez masaüstü bildirimi vermesin. */
 const notified = new Set();
 
@@ -57,9 +81,17 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     title: 'Signalbird',
-    // macOS'ta başlık çubuğu gizli ama trafik ışıkları duruyor: pencere
-    // uygulamaya değil web sayfasına ait hissettirmesin.
+    /*
+     * Başlık çubuğu gizli, pencere PANELİN ÜST ÇUBUĞUNDAN sürüklenir
+     * (Spotify'daki gibi). Panel o çubuğu `data-app-drag` ile işaretler;
+     * sürükleme kuralları `DRAG_CSS`'te, burada. Trafik ışıkları 72-76
+     * piksellik çubuğun dikey ortasına iner.
+     *
+     * (9 Eki 2026, Ahmet: "açıldığı yerde kalıyor" - önceki sürümde başlık
+     * gizliydi ama sürüklenecek hiçbir alan tanımlı değildi.)
+     */
     titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 20, y: 30 },
     backgroundColor: '#0b0d12',
     webPreferences: {
       partition: PARTITION,
@@ -70,6 +102,10 @@ function createWindow() {
   });
 
   mainWindow.loadURL(APP_URL);
+
+  mainWindow.webContents.on('dom-ready', () => {
+    mainWindow?.webContents.insertCSS(DRAG_CSS).catch(() => {});
+  });
 
   mainWindow.webContents.on('did-navigate', (_event, url) => bounceHome(url));
 
@@ -160,19 +196,16 @@ function openAt(path) {
 
 function trayIcon(unread) {
   /*
-   * Şablon görüntü (`setTemplateImage`): macOS koyu/açık menü çubuğunda
-   * simgeyi kendisi boyar. Renkli bir PNG koysaydık açık temada okunmuyordu.
+   * Şablon görüntü (`...Template.png`): macOS koyu/açık menü çubuğunda
+   * simgeyi kendisi boyar, yalnız alfa kanalı kullanılır.
    *
-   * Simge dosya olarak değil, kodda çizilerek üretiliyor - 16 piksellik bir
-   * kuş silueti için repoya ikili dosya koymaya değmez ve okunmamış varken
-   * noktalı hâli aynı yerden çıkıyor.
+   * Önceki sürüm simgeyi SVG veri adresinden üretiyordu; `nativeImage` SVG
+   * çözemez ve boş görüntü döner. Okunmamış yokken başlık da boş olduğundan
+   * menü çubuğunda hiçbir şey görünmüyordu. Kaynak: `assets/tray*.svg`,
+   * üretim: `npm run icon`. `@2x` eşi aynı klasörden kendiliğinden alınır.
    */
-  const svg = unread > 0
-    ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M2 9c3-5 7-6 11-6-1 4-3 7-7 8l-2 3H2z" fill="black"/><circle cx="13" cy="4" r="3" fill="black"/></svg>'
-    : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><path d="M2 9c3-5 7-6 11-6-1 4-3 7-7 8l-2 3H2z" fill="black"/></svg>';
-
-  const image = nativeImage.createFromDataURL(
-    'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64')
+  const image = nativeImage.createFromPath(
+    join(__dirname, '..', 'assets', unread > 0 ? 'tray-unreadTemplate.png' : 'trayTemplate.png')
   );
 
   image.setTemplateImage(true);
@@ -211,20 +244,39 @@ function buildTrayMenu() {
 
       items.push({
         label: `${dot}${line}`,
-        sublabel: `${event.module_title || event.key || ''} · ${relative(event.occurred_at)}`,
-        click: () => openAt(`/radio/events?event=${event.id}`),
+        sublabel: `${event.module_key?.title || event.module_key?.key || ''} · ${relative(event.occurred_at)}`,
+        click: () => openAt(`/radio?event=${event.id}`),
       });
     }
   }
 
   items.push({ type: 'separator' });
 
+  /*
+   * Okunmamış bildirimler başlıklarıyla - telsizle aynı ilke: açmadan okut.
+   * Tıklanan bildirim kendi ekranında açılır ve okundu sayılır.
+   */
   items.push({
     label: latest.unread > 0 ? `Bildirimler (${latest.unread} okunmamış)` : 'Bildirimler',
-    click: () => openAt('/notifications'),
+    enabled: false,
   });
 
-  items.push({ label: 'Telsiz akışı', click: () => openAt('/radio/events') });
+  for (const item of latest.notifications) {
+    items.push({
+      label: String(item.title).split('\n')[0].slice(0, 60),
+      sublabel: `${String(item.body).split('\n')[0].slice(0, 60)}${item.body ? ' · ' : ''}${relative(item.created_at)}`,
+      click: () => {
+        // Önce pencere; yönlendirmeyi preload okundu isteği bitince yapar
+        // (önce gitseydik sayfa değişirken istek yarıda kesilirdi).
+        openAt(null);
+        mainWindow.webContents.send('sb:read', { id: item.id, path: item.href });
+      },
+    });
+  }
+
+  items.push({ label: 'Tüm bildirimler', click: () => openAt('/alerts') });
+
+  items.push({ label: 'Telsiz akışı', click: () => openAt('/radio') });
   items.push({ label: 'Paneli aç', click: () => openAt(null) });
   items.push({ type: 'separator' });
   items.push({ label: 'Şimdi yenile', click: () => mainWindow?.webContents.send('sb:refresh') });
@@ -257,9 +309,9 @@ function notifyCritical(events) {
 
     new Notification({
       title: title.slice(0, 80) || 'Signalbird',
-      body: rest.join(' ').slice(0, 160) || event.module_title || '',
+      body: rest.join(' ').slice(0, 160) || event.module_key?.title || '',
     })
-      .on('click', () => openAt(`/radio/events?event=${event.id}`))
+      .on('click', () => openAt(`/radio?event=${event.id}`))
       .show();
   }
 
@@ -298,16 +350,29 @@ app.whenReady().then(async () => {
   });
 });
 
+/*
+ * Gerçek çıkış (Cmd+Q, Dock → Çık, oturum kapatma) pencereyi GİZLEMEZ.
+ * Bu bayrak yalnız menüdeki "Çıkış"ta kuruluyordu; Cmd+Q'da pencerenin
+ * `close` olayı çıkışı iptal ediyor, uygulama kapanmıyordu.
+ */
+app.on('before-quit', () => {
+  app.isQuitting = true;
+});
+
 // Pencere kapansa da uygulama menü çubuğunda yaşamaya devam eder.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+/** Preload'un API kökü: sayfanın kökeninden türetilemez (bkz. API_URL). */
+ipcMain.handle('sb:config', () => ({ apiUrl: API_URL }));
 
 /** Preload'un getirdiği veri. Hata da bir sonuçtur ve menüde yazılır. */
 ipcMain.on('sb:poll', (_event, payload) => {
   latest = {
     events: Array.isArray(payload?.events) ? payload.events : [],
     unread: Number(payload?.unread ?? 0),
+    notifications: Array.isArray(payload?.notifications) ? payload.notifications : [],
     error: payload?.error ?? null,
     at: Date.now(),
   };

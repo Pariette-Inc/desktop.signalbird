@@ -1,13 +1,13 @@
 {
   "name": "signalbird-desktop",
   "productName": "Signalbird",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Signalbird masaüstü uygulaması - panel + menü çubuğunda telsiz ve bildirimler",
   "main": "src/main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "icon": "node assets/make-icon.mjs",
+    "icon": "sh assets/make-icons.sh",
     "dist": "electron-builder --mac dmg zip --arm64 -c.mac.identity=null -c.mac.hardenedRuntime=false -c.mac.notarize=false",
     "dist:release": "electron-builder --mac dmg zip"
   },
@@ -21,6 +21,7 @@
     "files": [
       "src/**/*",
       "assets/icon.png",
+      "assets/tray*Template*.png",
       "package.json",
       "!build/**"
     ],
