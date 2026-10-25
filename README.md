@@ -21,6 +21,13 @@ Panel + **menü çubuğunda telsiz ve bildirimler**. macOS için Electron.
 3. `error`/`critical` olaylarda macOS bildirimi gösterir - **yalnız onlarda**.
    Her olay için bildirim, menü çubuğunun varlık sebebini yok ederdi.
 
+4. **Duvar ekranı** (1.1.0): 7/24 açık monitör için panelin alternatif
+   görünümü - siteler, Telsiz, bildirimler ve Janet işleri tek ekranda.
+   Panelde sağ üstteki kullanıcı menüsü → Görünüm → *Duvar ekranı* ya da
+   menü çubuğundan açılır. Sayfanın kendisi web'dedir (`/tr/wall`,
+   signalbird.web `components/wall`); uygulama o adresteyken ekranı
+   uyutmaz ve tam ekrana geçer, çıkınca (ESC) ikisini de geri alır.
+
 ## Kurulum
 
 `npm` gerekmez - `dist/` altındaki **DMG'yi açıp uygulamayı Applications'a
