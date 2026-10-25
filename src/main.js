@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Notification, Tray, ipcMain, nativeImage, session, shell } = require('electron');
+const { app, BrowserWindow, Menu, Notification, Tray, ipcMain, nativeImage, powerSaveBlocker, session, shell } = require('electron');
 const { join } = require('node:path');
 
 const { WINDOW_DAYS, expireIfStale, startHeartbeat } = require('./session');
@@ -107,7 +107,16 @@ function createWindow() {
     mainWindow?.webContents.insertCSS(DRAG_CSS).catch(() => {});
   });
 
-  mainWindow.webContents.on('did-navigate', (_event, url) => bounceHome(url));
+  mainWindow.webContents.on('did-navigate', (_event, url) => {
+    bounceHome(url);
+    wallMode(url);
+  });
+
+  // Panel içi geçişler (Next yönlendiricisi) sayfa yüklemez; duvar ekranına
+  // kullanıcı menüsünden gidiş bu olaydan gelir.
+  mainWindow.webContents.on('did-navigate-in-page', (_event, url, isMainFrame) => {
+    if (isMainFrame) wallMode(url);
+  });
 
   /*
    * Dış bağlantılar TARAYICIDA açılır.
@@ -138,7 +147,13 @@ function createWindow() {
     }
   });
 
+  // Gizli pencerede duvar ekranı uyanık tutmaz; yeniden gösterilince döner.
+  mainWindow.on('hide', () => wallMode(''));
+  mainWindow.on('show', () => wallMode(mainWindow.webContents.getURL()));
+
   mainWindow.on('closed', () => {
+    if (wallBlocker !== null) powerSaveBlocker.stop(wallBlocker);
+    wallBlocker = null;
     mainWindow = null;
   });
 }
@@ -177,6 +192,55 @@ function bounceHome(url) {
   } catch {
     // Adres çözülemiyorsa dokunma: yanlış bir yönlendirme, yanlış yerde
     // kalmaktan daha kötü.
+  }
+}
+
+/**
+ * Duvar ekranı (`/tr/wall`): 7/24 açık monitör için panelin alternatif
+ * görünümü. Sayfa web'dedir (signalbird.web `components/wall`); masaüstü
+ * yalnız YERLEŞİMİ ekler:
+ *
+ *   - ekran UYUMAZ (`prevent-display-sleep`): monitörün kararması duvarın
+ *     varlık sebebini yok ederdi. Engel yalnız duvar GÖRÜNÜRKEN durur:
+ *     duvardan çıkınca ya da pencere gizlenince kalkar.
+ *   - pencere TAM EKRANA geçer, çıkınca eski hâline döner. Kullanıcı tam
+ *     ekrandan kendisi çıkarsa (Ctrl+Cmd+F) zorlanmaz: yalnız girişte kurulur.
+ *
+ * Panel bundan habersizdir; işaret yalnız adrestir (bkz. preload: sayfaya
+ * global eklenmez).
+ *
+ * (25 Eki 2026, Ahmet: "signalbird mac masaüstü uygulamamız 7/24 açık
+ * olacak bir monitöre bağlanacak.")
+ */
+let wallBlocker = null;
+let wallFullScreen = false;
+
+function isWallUrl(url) {
+  try {
+    return isInternal(url) && /^\/(tr|en)\/wall\/?$/.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
+function wallMode(url) {
+  if (!mainWindow) return;
+
+  const inWall = isWallUrl(url) && mainWindow.isVisible();
+
+  if (inWall && wallBlocker === null) {
+    wallBlocker = powerSaveBlocker.start('prevent-display-sleep');
+
+    if (!mainWindow.isFullScreen()) {
+      mainWindow.setFullScreen(true);
+      wallFullScreen = true;
+    }
+  } else if (!inWall && wallBlocker !== null) {
+    powerSaveBlocker.stop(wallBlocker);
+    wallBlocker = null;
+
+    if (wallFullScreen && mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+    wallFullScreen = false;
   }
 }
 
@@ -278,6 +342,7 @@ function buildTrayMenu() {
 
   items.push({ label: 'Telsiz akışı', click: () => openAt('/radio') });
   items.push({ label: 'Paneli aç', click: () => openAt(null) });
+  items.push({ label: 'Duvar ekranı', click: () => openAt('/wall') });
   items.push({ type: 'separator' });
   items.push({ label: 'Şimdi yenile', click: () => mainWindow?.webContents.send('sb:refresh') });
   items.push({ type: 'separator' });
